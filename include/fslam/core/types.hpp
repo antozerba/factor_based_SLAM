@@ -42,11 +42,14 @@ struct Measurement {
 };
 
 // Raw 2-D lidar sweep. Beam i points at angle_min + i * angle_increment.
+// Ranges are float (memory: many beams per scan); angles are double because
+// feature extractors compare angle gaps against thresholds that can sit exactly
+// on a multiple of the increment (TreeDetector: 2 beams == 1 deg).
 struct LaserScan {
     std::vector<float> ranges;
-    float angle_min = 0.0f;
-    float angle_increment = 0.0f;
-    float range_max = 0.0f;
+    double angle_min = 0.0;
+    double angle_increment = 0.0;
+    double range_max = 0.0;
 };
 
 // Raw 2-D points in the sensor frame.
