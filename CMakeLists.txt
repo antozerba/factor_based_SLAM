@@ -7,13 +7,18 @@ find_package(GTSAM REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-add_library(fslam_core src/core/math.cpp)
+add_library(fslam_core src/core/math.cpp
+        include/fslam/core/types.hpp
+)
 target_include_directories(fslam_core PUBLIC include)
 target_link_libraries(fslam_core PUBLIC gtsam Eigen3::Eigen yaml-cpp)
 
 enable_testing()
 find_package(GTest REQUIRED)
-add_executable(fslam_tests tests/test_math.cpp)
+add_executable(fslam_tests tests/test_math.cpp
+        include/fslam/core/types.hpp
+        tests/test_types.cpp
+)
 target_link_libraries(fslam_tests fslam_core GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(fslam_tests)
