@@ -3,7 +3,6 @@
 //
 #include <gtest/gtest.h>
 #include <fslam/core/types.hpp>
-
 using namespace fslam;
 
 TEST(Types, MotionSampleDt) {
