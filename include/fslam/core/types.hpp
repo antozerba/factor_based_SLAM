@@ -29,6 +29,7 @@ struct MotionSample {
     Timestamp t1 = 0.0;
     Eigen::VectorXd u;
 
+    /// @brief Sample interval Δt = t1 - t0 [s].
     double dt() const { return t1 - t0; }
 };
 

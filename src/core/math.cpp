@@ -5,6 +5,12 @@
 
 namespace fslam::math{
 
+    /**
+     * @brief Smallest signed angle: wrap an angle to \f$ [-\pi, \pi] \f$.
+     *
+     * @param angle Angle
+     * @return Equivalent angle
+     */
     double wrapAngle(double angle)
     {
         return std::remainder(angle, 2.0 * M_PI);
@@ -12,6 +18,12 @@ namespace fslam::math{
 
 
 
+    /**
+     * @brief Assemble a dense joint covariance P  matrix from a GTSAM JointMarginal.
+     * @param joint_marginal Joint marginal over (at least) @p keys, from gtsam::Marginals.
+     * @param keys           Variables to include, in the desired block order.
+     * @return Dense symmetric matrix  P
+     */
     Eigen::MatrixXd assembleJointCovariance(const gtsam::JointMarginal& joint_marginal,
                                         const gtsam::KeyVector& keys) {
         const std::size_t n = keys.size();

@@ -24,6 +24,19 @@ struct FovGate {
     double max_range = std::numeric_limits<double>::infinity();
     double half_fov_rad = M_PI;
 
+    /**
+     * @brief Is a point at (@p range, @p bearing) inside the sensor's field of view?
+     *
+     * @verbatim
+     *   r < r_max   and   |φ| < φ_max
+     * @endverbatim
+     * Used to select the local map: only landmarks the sensor could have seen take part
+     * in data association.
+     *
+     * @param range   Range r [m].
+     * @param bearing Bearing φ in the sensor frame [rad], wrapped to [-π, π].
+     * @return True if the point is strictly inside the gate.
+     */
     bool contains(double range, double bearing) const {
         return range < max_range && std::abs(bearing) < half_fov_rad;
     }
@@ -38,34 +51,96 @@ class IMeasurementModel {
 public:
     virtual ~IMeasurementModel() = default;
 
+    /// @brief Model identifier, e.g. "range_bearing".
     virtual std::string name() const = 0;
 
-    // Measurement dimension m (2 for range-bearing, 1 for bearing-only, ...).
+    /// @brief Measurement dimension m (2 for range-bearing, 1 for bearing-only, ...).
     virtual int dim() const = 0;
 
-    // Predicted measurement of world landmark l from body pose T_wb.
-    // If non-null, H_pose (m x 3) and H_lm (m x 2) receive the Jacobians.
+    /**
+     * @brief Predicted measurement of a world landmark from a body pose.
+     *
+     * Evaluates the measurement function of the model:
+     * @verbatim
+     *   z = h(x, l) + w,    w ~ N(0, R)
+     *   ẑ = h(x, l)
+     * @endverbatim
+     * and, if requested, its Jacobians for the EKF-style linearisation:
+     * @verbatim
+     *   H_x = ∂h/∂x   (m x 3)
+     *   H_l = ∂h/∂l   (m x 2)
+     * @endverbatim
+     * with H_x taken in the tangent space at the BODY pose T_wb.
+     *
+     * @param T_wb   Body pose in the world.
+     * @param l      Landmark position in the world.
+     * @param H_pose If non-null, receives H_x.
+     * @param H_lm   If non-null, receives H_l.
+     * @return ẑ (size dim()).
+     */
     virtual Eigen::VectorXd predict(const gtsam::Pose2& T_wb, const gtsam::Point2& l,
                                     Eigen::MatrixXd* H_pose = nullptr,
                                     Eigen::MatrixXd* H_lm = nullptr) const = 0;
 
-    // z - z_hat, with angular components wrapped.
+    /**
+     * @brief Innovation between a measurement and a prediction.
+     *
+     * @verbatim
+     *   ν = z - ẑ      (ssa() applied to angular components)
+     * @endverbatim
+     * This is the vector used in the NIS  νᵀ S⁻¹ ν  for gating.
+     *
+     * @param z     Measurement z.
+     * @param z_hat Prediction ẑ.
+     * @return ν (size dim()).
+     */
     virtual Eigen::VectorXd residual(const Eigen::VectorXd& z, const Eigen::VectorXd& z_hat) const = 0;
 
-    // World landmark position from one measurement, or nullopt if the model
-    // cannot invert it (e.g. bearing-only needs delayed initialisation).
+    /**
+     * @brief Inverse measurement model: landmark position from a single measurement.
+     *
+     * @verbatim
+     *   l = h⁻¹(x, z)
+     * @endverbatim
+     * Used to initialise new landmarks.
+     *
+     * @param T_wb Body pose in the world.
+     * @param z    Measurement.
+     * @return World landmark position, or std::nullopt if one measurement does not
+     *         determine it (e.g. bearing-only needs delayed initialisation).
+     */
     virtual std::optional<gtsam::Point2> inverse(const gtsam::Pose2& T_wb, const Eigen::VectorXd& z) const = 0;
 
-    // Is a landmark with predicted measurement z_hat inside the gate (local map selection)?
+    /**
+     * @brief Is a landmark with predicted measurement @p z_hat inside the gate?
+     * @param z_hat Predicted measurement ẑ.
+     * @param gate  Field-of-view gate of the sensor.
+     * @return True if the landmark belongs to the local map for this sensor.
+     */
     virtual bool isVisible(const Eigen::VectorXd& z_hat, const FovGate& gate) const = 0;
 
-    // Factor between pose x and landmark l for measurement z. The noise model is
-    // in the SAME component order as z (no reordering needed by the caller).
+    /**
+     * @brief Build the factor between pose @p x and landmark @p l for measurement @p z.
+     *
+     * The factor adds this term to the MAP cost:
+     * @verbatim
+     *   ½ ‖h(x, l) - z‖²_R  =  ½ (h - z)ᵀ R⁻¹ (h - z)
+     * @endverbatim
+     * @p noise must be in the SAME component order as @p z; the caller never reorders.
+     *
+     * @param x     Key of the pose variable.
+     * @param l     Key of the landmark variable.
+     * @param z     Measurement z.
+     * @param noise Noise model for R (e.g. from NoiseModelFactory).
+     * @return Factor ready to be added to the graph.
+     */
     virtual gtsam::NonlinearFactor::shared_ptr makeFactor(gtsam::Key x, gtsam::Key l,
                                                           const Eigen::VectorXd& z,
                                                           const gtsam::SharedNoiseModel& noise) const = 0;
 
+    /// @brief Set the sensor mount T_bs (sensor pose in the body frame).
     void setMount(const SensorMount& m) { mount_ = m; }
+    /// @brief Sensor mount T_bs.
     const SensorMount& mount() const { return mount_; }
 
 protected:

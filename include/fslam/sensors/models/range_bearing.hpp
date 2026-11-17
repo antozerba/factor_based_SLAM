@@ -56,7 +56,9 @@ public:
 
     gtsam::NonlinearFactor::shared_ptr clone() const override;
 
+    /// @brief Measurement z = [r, φ]ᵀ this factor was built from.
     const Eigen::Vector2d& measured() const { return z_; }
+    /// @brief Sensor mount T_bs used in the prediction.
     const gtsam::Pose2& mount() const { return T_bs_; }
 
 private:

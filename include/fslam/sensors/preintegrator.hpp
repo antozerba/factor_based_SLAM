@@ -25,10 +25,14 @@ public:
     // Convenience: run the motion model on the sample, then integrate.
     void integrate(const IMotionModel& model, const MotionSample& s);
 
+    /// @brief True if no increment has been integrated since the last reset().
     bool empty() const { return count_ == 0; }
+    /// @brief Number of increments integrated since the last reset().
     std::size_t count() const { return count_; }
 
+    /// @brief Accumulated increment ΔT, body frame at t0.
     const gtsam::Pose2& delta() const { return delta_; }
+    /// @brief Covariance P of delta(), tangent space, ordered [x, y, yaw].
     const Eigen::Matrix3d& covariance() const { return cov_; }
 
     RelativeMotion result() const;

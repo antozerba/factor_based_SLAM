@@ -9,6 +9,12 @@
 
 namespace fslam {
 
+/**
+ * @brief Extract one [range, bearing] measurement per tree trunk from a laser frame.
+ * @param frame Frame carrying a LaserScan.
+ * @return Tree measurements z^j = [r^j, φ^j]ᵀ; see detect().
+ * @throws std::invalid_argument if the payload is not a LaserScan.
+ */
 std::vector<Eigen::VectorXd> TreeDetector::extract(const RawSensorFrame& frame) const {
     const auto* scan = std::get_if<LaserScan>(&frame.payload);
     if (!scan) {
@@ -18,9 +24,37 @@ std::vector<Eigen::VectorXd> TreeDetector::extract(const RawSensorFrame& frame) 
     return detect(*scan);
 }
 
-// Variable names follow GA2 detect_trees so the two can be compared line by line.
-// GA2 works with angles measured from the first beam (0 .. pi); here
-// a_i = i * inc, and angle_min is added back at the very end.
+/**
+ * @brief Detect tree trunks in a bare 2-D laser scan.
+ *
+ * Beam i has range r_i and angle a_i = i·Δa from the first beam. The steps are:
+ *  -# Keep beams with a return: r_i < max_beam_range.
+ *  -# Split into segments where consecutive kept beams jump in range,
+ *     |r_{i+1} - r_i| > range_jump, or in angle, a_{i+1} - a_i > angle_jump_rad.
+ *  -# Drop segments that are probably parts of a larger object (end of one segment
+ *     within merge_distance of the start of one of the next three), and the rear one
+ *     of two angularly adjacent segments (partially occluded).
+ *  -# Keep segments with endpoints p_s, p_e that are small, ‖p_s - p_e‖ < max_extent,
+ *     not too close, away from the scan edges, and roughly round:
+ *     @verbatim
+ *       d = (a_e - a_s + Δa) · (r_s + r_e) / 2     (arc length ≈ trunk diameter)
+ *       |r_s - r_e| < d / 3
+ *     @endverbatim
+ *  -# For each tree, measure to the trunk centre, not its surface:
+ *     @verbatim
+ *       r = r_mid + d / 2
+ *       φ = ssa( angle_min + (a_s + a_e) / 2 )
+ *     @endverbatim
+ *     where r_mid is the range of the middle beam(s). Trees with r ≥ max_range
+ *     are discarded.
+ *
+ * Variable names follow GA2 detect_trees so the two can be compared line by line.
+ * GA2 works with angles measured from the first beam (0 .. pi); here
+ * a_i = i * inc, and angle_min is added back at the very end.
+ *
+ * @param scan Laser scan (beam i at angle_min + i * angle_increment, sensor frame).
+ * @return Tree measurements [r, φ]ᵀ in the sensor frame.
+ */
 std::vector<Eigen::VectorXd> TreeDetector::detect(const LaserScan& scan) const {
     std::vector<Eigen::VectorXd> trees;
     const std::size_t n = scan.ranges.size();

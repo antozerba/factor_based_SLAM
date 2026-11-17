@@ -29,7 +29,9 @@ public:
         double min_angle_gap_rad = 2.0 * M_PI / 360.0;  // daMin2 (= 1 deg = 2 beams): occlusion test
     };
 
+    /// @brief Construct with the GA2 default thresholds.
     TreeDetector() = default;
+    /// @brief Construct with custom thresholds.
     explicit TreeDetector(const Params& p) : p_(p) {}
 
     std::string name() const override { return "tree_detector"; }
@@ -38,6 +40,7 @@ public:
     // The detector itself, on a bare scan (useful for tests and tools).
     std::vector<Eigen::VectorXd> detect(const LaserScan& scan) const;
 
+    /// @brief Detection thresholds.
     const Params& params() const { return p_; }
 
 private:

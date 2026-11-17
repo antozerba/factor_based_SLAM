@@ -9,11 +9,13 @@ namespace fslam {
 // (GA2 sim: relative_pose_cov = odom_cov_matrix, not scaled by dt).
 class DirectRelativePoseModel : public IMotionModel {
 public:
+    /// @brief Construct with a constant per-sample covariance Q, ordered [x, y, yaw].
     explicit DirectRelativePoseModel(const Eigen::Matrix3d& Q) : Q_(Q) {}
 
     std::string name() const override { return "direct_relative_pose"; }
     int inputDim() const override { return 3; }
     gtsam::Pose2 relativePose(const MotionSample& s) const override;
+    /// @brief Constant Q_k = Q for every sample (not scaled by Δt, as in GA2).
     Eigen::Matrix3d covariance(const MotionSample&) const override { return Q_; }
 
 private:

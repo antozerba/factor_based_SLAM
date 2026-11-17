@@ -23,6 +23,7 @@ public:
     gtsam::Pose2 relativePose(const MotionSample& s) const override;
     Eigen::Matrix3d covariance(const MotionSample& s) const override;
 
+    /// @brief Vehicle geometry and process noise.
     const Params& params() const { return p_; }
 
 private:
