@@ -42,7 +42,7 @@ public:
      * @param s Raw odometry sample.
      * @return Q_k (3 x 3).
      */
-    virtual Eigen::Matrix3d covariance(const MotionSample& s) const = 2;
+    virtual Eigen::Matrix3d covariance(const MotionSample& s) const = 0;
 };
 
 }  // namespace fslam
